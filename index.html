@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ScholarFlow · AI 论文共读与脉络梳理</title>
+<meta name="description" content="面向硕士/博士研究生的论文共读与脉络梳理工具：三层摘要、四栏沉淀卡、领域脉络图、段落级共读批注。" />
+<style>
+:root{
+  --ink:#1F3D36; --ink-2:#2E5148; --ink-soft:#3C5C53;
+  --paper:#F5F2EA; --card:#FBFAF6; --card-2:#F1EDE2;
+  --line:#DED7C6; --line-2:#EAE4D6;
+  --text:#222E2A; --muted:#6E7C75; --muted-2:#8C9892;
+  --gold:#8A6D3B; --gold-bg:#F3EADA;
+  --warn:#9C4A3C; --warn-bg:#F6E7E3;
+  --ok:#3F6B4F; --ok-bg:#E7F0E8;
+  --radius:3px;
+  --serif:"Songti SC","Source Han Serif SC","Noto Serif SC",Georgia,"Times New Roman",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--paper); color:var(--text);
+  font-family:var(--sans); font-size:14px; line-height:1.8;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:var(--serif); font-weight:600; margin:0; line-height:1.45; letter-spacing:.02em}
+p{margin:0}
+a{color:var(--ink); text-decoration:none}
+button{font-family:inherit; font-size:13px; cursor:pointer; border-radius:var(--radius)}
+input,select,textarea{font-family:inherit; font-size:13px; color:var(--text)}
+::selection{background:var(--gold-bg)}
+
+/* ---------- 布局 ---------- */
+.topbar{
+  position:sticky; top:0; z-index:50; background:rgba(245,242,234,.94);
+  backdrop-filter:blur(6px); border-bottom:1px solid var(--line);
+  display:flex; align-items:center; gap:20px; padding:0 22px; height:54px;
+}
+.brand{display:flex; align-items:baseline; gap:9px}
+.brand b{font-family:var(--serif); font-size:19px; color:var(--ink); letter-spacing:.06em}
+.brand span{font-size:11px; color:var(--muted); letter-spacing:.12em; text-transform:uppercase}
+.topnav{display:flex; gap:2px; margin-left:auto; flex-wrap:wrap}
+.topnav a{
+  padding:5px 10px; font-size:12.5px; color:var(--muted); border-radius:var(--radius);
+}
+.topnav a:hover{color:var(--ink); background:var(--card-2)}
+.topnav a.on{color:var(--ink); background:var(--card-2); font-weight:600}
+.topact{margin-left:14px; display:flex; gap:8px; align-items:center}
+
+.btn{
+  border:1px solid var(--ink); background:var(--ink); color:#F7F5EF;
+  padding:6px 14px; letter-spacing:.03em;
+}
+.btn:hover{background:var(--ink-2)}
+.btn.ghost{background:transparent; color:var(--ink); border:1px solid var(--line)}
+.btn.ghost:hover{border-color:var(--ink); background:var(--card)}
+.btn.mini{padding:3px 9px; font-size:12px; border:1px solid var(--line); background:var(--card); color:var(--ink-soft)}
+.btn.mini:hover{border-color:var(--ink)}
+.btn.warn{background:transparent; color:var(--warn); border:1px solid #D9BDB6}
+.btn.warn:hover{background:var(--warn-bg)}
+.btn:disabled{opacity:.45; cursor:not-allowed}
+
+.shell{display:grid; grid-template-columns:206px minmax(0,1fr); max-width:1360px; margin:0 auto; gap:30px; padding:0 22px}
+.sidenav{position:sticky; top:76px; align-self:start; padding:22px 0; height:calc(100vh - 96px); overflow:auto}
+.sidenav .grp{font-size:11px; letter-spacing:.14em; color:var(--muted-2); text-transform:uppercase; margin-bottom:10px}
+.sidenav a{
+  display:flex; gap:9px; align-items:baseline; padding:6px 10px 6px 8px; color:var(--muted);
+  border-left:2px solid transparent; font-size:13px;
+}
+.sidenav a i{font-style:normal; font-size:11px; color:var(--muted-2); font-family:var(--serif)}
+.sidenav a:hover{color:var(--ink)}
+.sidenav a.on{color:var(--ink); border-left-color:var(--ink); background:var(--card-2); font-weight:600}
+main{padding:26px 0 70px; min-width:0}
+
+/* ---------- 通用块 ---------- */
+section.mod{padding:34px 0 10px; border-top:1px solid var(--line-2)}
+section.mod:first-of-type{border-top:none}
+.modhead{display:flex; align-items:flex-end; gap:14px; margin-bottom:4px}
+.modhead .no{font-family:var(--serif); font-size:13px; color:var(--gold); letter-spacing:.1em}
+.modhead h2{font-size:22px}
+.modhead .kpi{margin-left:auto; font-size:12px; color:var(--muted)}
+.modsub{color:var(--muted); font-size:13px; margin:2px 0 18px; max-width:820px}
+
+.panel{background:var(--card); border:1px solid var(--line); padding:16px 18px}
+.panel + .panel{margin-top:14px}
+.ptitle{display:flex; align-items:center; gap:10px; margin-bottom:12px}
+.ptitle h3{font-size:15px}
+.ptitle .tag{font-size:11px; color:var(--muted); border:1px solid var(--line); padding:1px 7px; letter-spacing:.04em}
+.ptitle .right{margin-left:auto; display:flex; gap:8px; align-items:center}
+
+.grid2{display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:14px}
+.grid3{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px}
+@media (max-width:1080px){ .grid2,.grid3{grid-template-columns:minmax(0,1fr)} }
+
+.muted{color:var(--muted)}
+.tiny{font-size:12px}
+.hl{background:var(--gold-bg); color:var(--ink); padding:0 2px}
+.pill{display:inline-block; font-size:11.5px; padding:1px 8px; border:1px solid var(--line); color:var(--ink-soft); background:var(--paper)}
+.pill.gold{background:var(--gold-bg); border-color:#E2D5BC; color:var(--gold)}
+.pill.ok{background:var(--ok-bg); border-color:#CBD9CC; color:var(--ok)}
+.pill.warn{background:var(--warn-bg); border-color:#E0C7C0; color:var(--warn)}
+
+.pagechip{
+  display:inline-block; font-family:var(--serif); font-size:11.5px; color:var(--gold);
+  border:1px solid #E2D5BC; background:var(--gold-bg); padding:0 6px; margin-left:6px;
+  cursor:pointer; line-height:1.6;
+}
+.pagechip:hover{background:#EADFC6}
+
+/* ---------- Hero ---------- */
+.hero{padding:26px 0 6px}
+.hero h1{font-size:31px; max-width:760px}
+.hero .lede{color:var(--muted); max-width:760px; margin-top:10px}
+.measure{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin:22px 0 6px}
+@media (max-width:900px){.measure{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.measure div{border:1px solid var(--line); background:var(--card); padding:12px 14px}
+.measure b{display:block; font-family:var(--serif); font-size:22px; color:var(--ink); line-height:1.3}
+.measure span{font-size:11.5px; color:var(--muted); letter-spacing:.03em}
+.rule{font-size:12px; color:var(--muted); border-left:2px solid var(--ink); padding-left:10px; margin-top:14px}
+
+/* ---------- 01 导入 ---------- */
+.drop{
+  border:1px dashed #C9C0AC; background:var(--card); padding:26px; text-align:center;
+  transition:.15s; cursor:pointer;
+}
+.drop:hover,.drop.over{background:var(--gold-bg); border-color:var(--gold)}
+.drop b{font-family:var(--serif); font-size:16px; display:block}
+.drop span{font-size:12px; color:var(--muted)}
+.qrow{display:grid; grid-template-columns:minmax(0,1fr) 76px 96px 120px; gap:10px; align-items:center; padding:8px 0; border-bottom:1px dashed var(--line-2)}
+.qrow.head{font-size:11.5px; color:var(--muted-2); letter-spacing:.08em; border-bottom:1px solid var(--line)}
+.bar{height:5px; background:var(--card-2); border:1px solid var(--line-2)}
+.bar i{display:block; height:100%; background:var(--ink-soft); width:0; transition:width .2s}
+table.meta{width:100%; border-collapse:collapse; font-size:13px}
+table.meta th{text-align:left; font-weight:600; color:var(--muted); font-size:11.5px; letter-spacing:.06em; border-bottom:1px solid var(--line); padding:6px 8px 6px 0}
+table.meta td{padding:7px 8px 7px 0; border-bottom:1px dashed var(--line-2); vertical-align:top}
+table.meta td[contenteditable="true"]{background:var(--gold-bg); outline:none}
+
+/* ---------- 02 摘要 ---------- */
+.tabs{display:flex; gap:0; border-bottom:1px solid var(--line); margin-bottom:14px}
+.tabs button{
+  background:none; border:none; border-bottom:2px solid transparent; padding:7px 15px;
+  color:var(--muted); font-size:13.5px;
+}
+.tabs button.on{color:var(--ink); border-bottom-color:var(--ink); font-weight:600}
+.sent{margin-bottom:11px; padding-left:14px; position:relative}
+.sent:before{content:""; position:absolute; left:0; top:11px; width:5px; height:5px; background:var(--gold); border-radius:50%}
+.layer{display:none} .layer.on{display:block}
+.bd{border-left:2px solid var(--ink); padding:2px 0 2px 12px; margin-bottom:12px}
+.bd h4{font-size:13.5px; color:var(--ink); letter-spacing:.04em}
+.stage{display:flex; gap:6px; flex-wrap:wrap; margin:10px 0 4px}
+.stage span{font-size:11.5px; color:var(--muted-2); border:1px solid var(--line-2); padding:1px 8px}
+.stage span.on{color:var(--ink); border-color:var(--ink); background:var(--card-2)}
+
+/* ---------- 原文窗格 ---------- */
+.src{background:var(--paper); border:1px solid var(--line); height:520px; overflow:auto; padding:14px 16px; font-family:var(--serif); font-size:13.5px}
+.src .sp{margin-bottom:14px; padding:8px 10px; border-left:2px solid transparent}
+.src .sp.on{border-left-color:var(--gold); background:var(--gold-bg)}
+.src .pg{font-family:var(--sans); font-size:11px; color:var(--muted-2); letter-spacing:.08em; display:block; margin-bottom:3px}
+.srchead{display:flex; align-items:center; gap:8px; margin-bottom:10px}
+.srchead h4{font-size:13.5px}
+.srchead .right{margin-left:auto; font-size:11.5px; color:var(--muted)}
+
+/* ---------- 03 四栏卡 ---------- */
+.cards4{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px}
+@media (max-width:1080px){.cards4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.c4{background:var(--card); border:1px solid var(--line); border-top:2px solid var(--ink); padding:12px 13px; min-height:210px}
+.c4 h4{font-size:13px; letter-spacing:.08em; color:var(--ink); margin-bottom:8px; display:flex; align-items:center}
+.c4 h4 em{font-style:normal; margin-left:auto; font-size:11px; color:var(--muted-2)}
+.c4 .body{font-size:13px; outline:none}
+.c4 .body[contenteditable="true"]{background:var(--gold-bg); padding:4px 6px}
+.c4 .links{margin-top:10px; border-top:1px dashed var(--line-2); padding-top:8px}
+
+/* ---------- 04 脉络图 ---------- */
+.graphwrap{display:grid; grid-template-columns:minmax(0,1fr) 290px; gap:14px}
+@media (max-width:1080px){.graphwrap{grid-template-columns:minmax(0,1fr)}}
+svg.graph{width:100%; height:520px; background:var(--paper); border:1px solid var(--line); display:block; touch-action:none}
+svg.graph .edge{fill:none; stroke:#B9B2A1; stroke-width:1.3}
+svg.graph .edge.user{stroke:var(--gold); stroke-dasharray:5 4; stroke-width:1.5}
+svg.graph .arrow{fill:#B9B2A1}
+svg.graph .arrow.user{fill:var(--gold)}
+svg.graph .nd circle{fill:var(--card); stroke:var(--ink-soft); stroke-width:1.4; cursor:grab}
+svg.graph .nd.sel circle{fill:var(--ink); stroke:var(--ink)}
+svg.graph .nd.sel text{fill:#F5F2EA}
+svg.graph .nd text{font-family:var(--sans); font-size:10.5px; fill:var(--text); text-anchor:middle; pointer-events:none}
+svg.graph .nd text.yr{font-family:var(--serif); font-size:12px; fill:var(--ink)}
+svg.graph .elabel{font-size:10.5px; fill:var(--gold); font-family:var(--sans)}
+.chain{display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:12.5px}
+.chain i{font-style:normal; color:var(--muted-2)}
+
+/* ---------- 05 共读 ---------- */
+.members{display:flex; gap:5px; flex-wrap:wrap; align-items:center}
+.av{width:26px; height:26px; border-radius:50%; background:var(--ink-soft); color:#F5F2EA; font-size:11px; display:flex; align-items:center; justify-content:center; position:relative}
+.av.off{background:var(--card-2); color:var(--muted); border:1px solid var(--line)}
+.av.online:after{content:""; position:absolute; right:-1px; bottom:-1px; width:7px; height:7px; border-radius:50%; background:var(--ok); border:1.5px solid var(--card)}
+.para{border:1px solid var(--line); background:var(--card); padding:12px 14px; margin-bottom:10px}
+.para.sel{border-color:var(--ink)}
+.para .txt{font-family:var(--serif); font-size:13.5px}
+.para .meta{display:flex; align-items:center; gap:8px; margin-top:8px; font-size:11.5px; color:var(--muted)}
+.ann{border-left:2px solid var(--gold); padding:6px 0 6px 11px; margin-top:9px; font-size:13px}
+.ann .who{font-size:11.5px; color:var(--muted)}
+.ann .rep{margin-left:14px; margin-top:5px; font-size:12.5px; color:var(--ink-soft); border-left:1px solid var(--line); padding-left:10px}
+.ann.stale{border-left-color:#C8BDB2; opacity:.9}
+.decide{background:var(--ok-bg); border:1px solid #CBD9CC; padding:8px 12px; font-size:13px; margin-top:8px}
+
+/* ---------- 06 知识库 ---------- */
+.searchbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+.searchbar input{flex:1; min-width:220px; padding:7px 11px; border:1px solid var(--line); background:var(--paper)}
+.searchbar input:focus{outline:none; border-color:var(--ink); background:var(--gold-bg)}
+.chips{display:flex; gap:6px; flex-wrap:wrap}
+.chip{font-size:12px; padding:2px 10px; border:1px solid var(--line); background:var(--card); color:var(--ink-soft)}
+.chip.on{background:var(--ink); color:#F5F2EA; border-color:var(--ink)}
+.res{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px}
+@media (max-width:1080px){.res{grid-template-columns:minmax(0,1fr)}}
+.resitem{border:1px solid var(--line); background:var(--card); padding:11px 13px; cursor:pointer}
+.resitem:hover{border-color:var(--ink); background:var(--card-2)}
+.resitem .k{font-size:11px; color:var(--muted-2); letter-spacing:.06em}
+.resitem .t{font-size:13.5px; margin:2px 0}
+.outline{font-family:var(--serif); font-size:13.5px}
+.outline li{margin-bottom:4px}
+.stats{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px}
+
+/* ---------- 07 定价 ---------- */
+.plans{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px}
+@media (max-width:900px){.plans{grid-template-columns:minmax(0,1fr)}}
+.plan{border:1px solid var(--line); background:var(--card); padding:18px}
+.plan.feat{border-top:2px solid var(--ink)}
+.plan h3{font-size:17px}
+.plan .price{font-family:var(--serif); font-size:26px; color:var(--ink); margin:6px 0 2px}
+.plan ul{margin:12px 0 16px; padding-left:18px; font-size:13px; color:var(--ink-soft)}
+.plan li{margin-bottom:3px}
+.quota{margin-top:10px}
+.qline{display:grid; grid-template-columns:88px minmax(0,1fr) 78px; gap:10px; align-items:center; font-size:12.5px; margin-bottom:6px}
+.stepper{display:flex; align-items:center; gap:10px}
+.stepper button{width:26px; height:26px; border:1px solid var(--line); background:var(--card); color:var(--ink)}
+.stepper b{font-family:var(--serif); font-size:17px; min-width:34px; text-align:center}
+
+/* ---------- 弹窗 / toast ---------- */
+.mask{position:fixed; inset:0; background:rgba(31,61,54,.28); display:none; align-items:center; justify-content:center; z-index:80}
+.mask.on{display:flex}
+.modal{background:var(--card); border:1px solid var(--line); width:440px; max-width:92vw; padding:20px}
+.modal h3{font-size:16px; margin-bottom:6px}
+.modal textarea{width:100%; height:74px; border:1px solid var(--line); background:var(--paper); padding:8px; resize:vertical}
+.modal .foot{display:flex; gap:8px; justify-content:flex-end; margin-top:14px}
+#toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%); z-index:99; display:flex; flex-direction:column; gap:8px; align-items:center}
+#toast div{background:var(--ink); color:#F5F2EA; font-size:12.5px; padding:7px 16px; border-radius:2px; box-shadow:0 2px 10px rgba(0,0,0,.12)}
+footer{border-top:1px solid var(--line); padding:22px; color:var(--muted); font-size:12px; max-width:1360px; margin:0 auto}
+footer b{color:var(--ink); font-weight:600}
+@media (max-width:820px){ .shell{grid-template-columns:minmax(0,1fr)} .sidenav{display:none} }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand"><b>ScholarFlow</b><span>research reading</span></div>
+  <nav class="topnav">
+    <a href="#m1">导入</a><a href="#m2">摘要</a><a href="#m3">沉淀卡</a><a href="#m4">脉络图</a>
+    <a href="#m5">共读</a><a href="#m6">知识库</a><a href="#m7">定价</a>
+  </nav>
+  <div class="topact">
+    <span class="tiny muted" id="loadTime">加载 —</span>
+    <button class="btn mini" id="btnExportAll">导出全部数据</button>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="sidenav" id="sidenav">
+    <div class="grp">模块</div>
+    <a href="#m1" class="on"><i>01</i>文献导入</a>
+    <a href="#m2"><i>02</i>AI 三层摘要</a>
+    <a href="#m3"><i>03</i>四栏沉淀卡</a>
+    <a href="#m4"><i>04</i>脉络图</a>
+    <a href="#m5"><i>05</i>共读小组</a>
+    <a href="#m6"><i>06</i>个人知识库</a>
+    <a href="#m7"><i>07</i>订阅与定价</a>
+  </aside>
+
+  <main>
+    <!-- HERO -->
+    <div class="hero">
+      <h1>把单篇阅读沉淀为可复用的领域脉络</h1>
+      <p class="lede">面向硕士 / 博士研究生的论文共读环境。导入、摘要、沉淀、连线、讨论、检索，一条链路走完；所有 AI 结论附原文页码，可溯源、可校对、可推翻。</p>
+      <div class="measure">
+        <div><b id="m-load">—</b><span>首页加载（目标 ≤ 2s）</span></div>
+        <div><b id="m-pdf">41s</b><span>20 页 PDF 处理 P95（目标 ≤ 60s）</span></div>
+        <div><b>50</b><span>同篇在线协作人数</span></div>
+        <div><b>100%</b><span>AI 结论页码可溯源率</span></div>
+      </div>
+      <p class="rule">设计约束：不做通用网盘，不做聊天机器人；一级模块 7 个；AI 结论无出处即丢弃重生成；用户批注只可归档，永不自动删除。</p>
+    </div>
+
+    <!-- 01 -->
+    <section class="mod" id="m1">
+      <div class="modhead"><span class="no">01</span><h2>文献导入</h2>
+        <span class="kpi">20 页 PDF 上传+解析 P95 ≤ 60s · 元数据准确率 ≥ 95% · 单批 50 份</span></div>
+      <p class="modsub">批量上传 PDF / DOI / arXiv 链接，自动抽取标题、作者、年份、期刊与参考文献；同 DOI 去重与版本合并提示；解析队列显示进度与失败原因。</p>
+
+      <div class="drop" id="drop">
+        <b>拖入 PDF，或点击载入示例批次</b>
+        <span>支持 PDF / DOI / arXiv 链接 · 单份 ≤ 80MB · 单批 ≤ 50 份 · 扫描件自动转 OCR 队列</span>
+      </div>
+
+      <div class="panel" style="margin-top:14px">
+        <div class="ptitle"><h3>解析队列</h3>
+          <span class="tag" id="qcount">0 项</span>
+          <div class="right"><button class="btn mini" id="btnSample">载入示例批次</button></div>
+        </div>
+        <div class="qrow head"><span>文件</span><span>大小</span><span>状态</span><span>进度</span></div>
+        <div id="qlist"><p class="tiny muted" style="padding:10px 0">暂无任务。</p></div>
+      </div>
+
+      <div class="panel">
+        <div class="ptitle"><h3>已入库文献</h3><span class="tag" id="libcount">8 篇</span>
+          <div class="right"><button class="btn mini" id="btnProof">开启元数据校对</button></div>
+        </div>
+        <table class="meta">
+          <thead><tr><th style="width:34%">标题</th><th>作者</th><th>年份</th><th>期刊 / 会议</th><th>方法标签</th><th>状态</th></tr></thead>
+          <tbody id="libbody"></tbody>
+        </table>
+        <p class="tiny muted" style="margin-top:8px">校对开启后单元格可直接编辑；重复命中以「待确认重复」标出，不做静默覆盖。</p>
+      </div>
+    </section>
+
+    <!-- 02 -->
+    <section class="mod" id="m2">
+      <div class="modhead"><span class="no">02</span><h2>AI 三层摘要</h2>
+        <span class="kpi">三层完成 P95 ≤ 60s · 可溯源率 100% · 页码准确率 ≥ 98%</span></div>
+      <p class="modsub">一句话结论、300 字要点、结构化拆解（背景 / 方法 / 实验 / 结论）。每条结论绑定 (page, bbox)，点击页码跳转原文并高亮。</p>
+
+      <div class="panel">
+        <div class="ptitle"><h3>生成</h3>
+          <div class="right">
+            <select id="sumPick" style="padding:5px 8px;border:1px solid var(--line);background:var(--paper)"></select>
+            <button class="btn" id="btnGen">开始生成</button>
+            <select id="verPick" style="padding:5px 8px;border:1px solid var(--line);background:var(--paper)"><option>版本 1（当前）</option></select>
+            <button class="btn ghost" id="btnEdit">编辑</button>
+          </div>
+        </div>
+        <div class="stage" id="stage">
+          <span data-s="1">① 一句话结论</span><span data-s="2">② 300 字要点</span><span data-s="3">③ 结构化拆解</span>
+        </div>
+        <div class="bar" style="margin-bottom:6px"><i id="genBar"></i></div>
+        <p class="tiny muted" id="genHint">选择文献后开始生成；缺页码的结论会被校验层丢弃并重生成。</p>
+      </div>
+
+      <div class="grid2">
+        <div class="panel">
+          <div class="tabs">
+            <button class="on" data-l="l1">一句话结论</button>
+            <button data-l="l2">300 字要点</button>
+            <button data-l="l3">结构化拆解</button>
+          </div>
+          <div class="layer on" id="l1"></div>
+          <div class="layer" id="l2"></div>
+          <div class="layer" id="l3"></div>
+        </div>
+        <div class="panel">
+          <div class="srchead"><h4>原文定位</h4><span class="right" id="srcHint">点击页码 chip 跳转</span></div>
+          <div class="src" id="srcPane"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section class="mod" id="m3">
+      <div class="modhead"><span class="no">03</span><h2>四栏沉淀卡</h2>
+        <span class="kpi">AI 预填覆盖率 ≥ 90% · 100 张卡导出 ≤ 5s · 断网本地自动保存</span></div>
+      <p class="modsub">每篇一张「问题—方法—结论—局限」卡，预填 AI 草稿且可编辑；局限栏可关联后续论文的改进点；批量导出 BibTeX / Markdown / 表格。</p>
+      <div class="panel">
+        <div class="ptitle"><h3 id="cardTitle">—</h3>
+          <div class="right">
+            <button class="btn mini" id="btnCardEdit">编辑四栏</button>
+            <button class="btn mini" id="btnPool">加入素材池</button>
+            <button class="btn mini" id="btnExpMd">导出 Markdown</button>
+            <button class="btn mini" id="btnExpBib">导出 BibTeX</button>
+            <button class="btn mini" id="btnExpCsv">导出表格</button>
+          </div>
+        </div>
+        <div class="cards4" id="cards4"></div>
+        <p class="tiny muted" style="margin-top:10px">卡片内容随摘要模块所选文献联动；每格引用以 (page, span) 锚点存储，原文变更时标记失效而非丢弃。</p>
+      </div>
+    </section>
+
+    <!-- 04 -->
+    <section class="mod" id="m4">
+      <div class="modhead"><span class="no">04</span><h2>脉络图</h2>
+        <span class="kpi">100 节点首屏 ≤ 1.5s · 拖拽 ≥ 50fps · 强制连线 100% 可撤销</span></div>
+      <p class="modsub">基于参考文献自动生成引用有向图；节点可手动拖拽并锁定；方法相近的论文可强制连线，自动标注「疑似方法相似」。</p>
+
+      <div class="graphwrap">
+        <div>
+          <div class="panel" style="padding:10px">
+            <svg class="graph" id="graph" viewBox="0 0 900 520" preserveAspectRatio="xMidYMid meet"></svg>
+          </div>
+          <div class="panel" style="padding:10px 14px; margin-top:12px">
+            <div class="ptitle" style="margin-bottom:8px"><h3>操作</h3><span class="tag">点击节点选中，两个节点后可强制连线</span>
+              <div class="right">
+                <button class="btn mini" id="btnLink" disabled>强制连线</button>
+                <button class="btn mini" id="btnUndo">撤销上一条</button>
+                <button class="btn mini" id="btnLock">锁定布局</button>
+                <button class="btn mini" id="btnSaveView">保存视图</button>
+                <button class="btn mini" id="btnReset">复位</button>
+                <button class="btn mini warn" id="btnDelNode">删除该论文</button>
+              </div>
+            </div>
+            <p class="tiny muted">拖拽节点即覆盖自动布局并进入「手动」状态；强制连线写入 source: user，与文献引用边（source: ref）分开存储，可逐条撤销。删除论文前会列出受影响的关联边并显式确认。</p>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="ptitle"><h3>节点详情</h3></div>
+          <div id="nodeInfo"><p class="tiny muted">未选中节点。</p></div>
+          <div style="margin-top:14px" class="ptitle"><h3>方法演进链</h3><span class="tag">ref 边</span></div>
+          <div class="chain" id="chain"><span class="tiny muted">选中节点后展示其引用上下游。</span></div>
+          <div style="margin-top:14px" class="ptitle"><h3>相似连线候选</h3><span class="tag">embedding Top5</span></div>
+          <div id="cand"><p class="tiny muted">选中节点后推荐。</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 -->
+    <section class="mod" id="m5">
+      <div class="modhead"><span class="no">05</span><h2>共读小组</h2>
+        <span class="kpi">50 人在线批注同步 ≤ 300ms · 冲突合并零丢失 · 批注只归档不删除</span></div>
+      <p class="modsub">建组并指派精读篇目与截止时间；段落级批注与串式讨论，批注锚定句子；实时显示在线状态与光标，讨论可收敛为「待决议」。</p>
+      <div class="grid2">
+        <div class="panel">
+          <div class="ptitle"><h3>《Longformer》精读 · 第 3 次组会</h3>
+            <span class="tag">截止 10-25</span>
+            <div class="right">
+              <button class="btn mini" id="btnSimUpdate">模拟原文更新</button>
+              <button class="btn mini" id="btnMinutes">导出组会纪要</button>
+            </div>
+          </div>
+          <div class="tiny muted" style="margin-bottom:10px">在线 50 人 · 批注 12 条 · 待决议 2 项</div>
+          <div class="members" id="members"></div>
+          <div id="paras" style="margin-top:14px"></div>
+        </div>
+        <div>
+          <div class="panel">
+            <div class="ptitle"><h3>待决议</h3><span class="tag" id="decCount">2</span></div>
+            <div id="decList"></div>
+          </div>
+          <div class="panel">
+            <div class="ptitle"><h3>已归档批注</h3><span class="tag">归档 ≠ 删除</span></div>
+            <div id="archList"><p class="tiny muted">暂无归档。</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 06 -->
+    <section class="mod" id="m6">
+      <div class="modhead"><span class="no">06</span><h2>个人知识库</h2>
+        <span class="kpi">10 万条检索 P95 ≤ 500ms · Top10 命中率 ≥ 85% · 引注页码正确率 100%</span></div>
+      <p class="modsub">全文 + 批注 + 卡片统一检索，按标签、年份、方法、局限筛选；按课题聚合卡片生成综述大纲，引注（作者, 年份, p.x）自动生成。</p>
+      <div class="panel">
+        <div class="searchbar">
+          <input id="q" placeholder="检索全文 / 批注 / 卡片，例如：线性注意力、局限、滑动窗口" />
+          <div class="chips" id="filters"></div>
+          <button class="btn mini" id="btnOutline">生成综述大纲</button>
+          <button class="btn mini" id="btnDlOutline">下载草稿</button>
+        </div>
+        <div class="stats" style="margin:14px 0">
+          <div class="panel" style="padding:10px 14px"><span class="tiny muted">在库篇数</span><div style="font-family:var(--serif);font-size:20px" id="st1">—</div></div>
+          <div class="panel" style="padding:10px 14px"><span class="tiny muted">累计页数</span><div style="font-family:var(--serif);font-size:20px" id="st2">—</div></div>
+          <div class="panel" style="padding:10px 14px"><span class="tiny muted">未读积压</span><div style="font-family:var(--serif);font-size:20px" id="st3">—</div></div>
+        </div>
+        <div class="res" id="res"></div>
+        <div class="panel" style="margin-top:14px" id="outlineBox" hidden>
+          <div class="ptitle"><h3>综述草稿大纲</h3><span class="tag">带页码引注</span></div>
+          <div class="outline" id="outline"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 07 -->
+    <section class="mod" id="m7">
+      <div class="modhead"><span class="no">07</span><h2>订阅与定价</h2>
+        <span class="kpi">配额判定 ≤ 1s · 到期后数据可导出率 100% · 全量导出包 ≤ 30 分钟</span></div>
+      <p class="modsub">免费版 / 实验室版分层，差异为篇数、协作人数、脉络节点数；实验室版按席位订阅，含成员管理与用量看板；用量临近上限提前提示，不静默中断。</p>
+      <div class="plans">
+        <div class="plan">
+          <h3>免费版</h3><div class="price">¥0</div><span class="tiny muted">个人 · 永久</span>
+          <ul>
+            <li>在库 100 篇 / 每月新增 20 篇</li>
+            <li>三层摘要与四栏卡不限</li>
+            <li>脉络图 ≤ 30 节点</li>
+            <li>共读小组 3 人</li>
+          </ul>
+          <button class="btn ghost" id="btnFree">当前方案</button>
+        </div>
+        <div class="plan feat">
+          <h3>实验室版</h3><div class="price">¥68 <span class="tiny muted">/ 席位 / 月</span></div><span class="tiny muted">按组织计费 · 含用量看板</span>
+          <ul>
+            <li>在库不限 / 脉络图 ≤ 500 节点</li>
+            <li>共读小组 50 人同篇在线</li>
+            <li>席位管理与成员用量可视</li>
+            <li>上限前 80% 提示，不静默中断</li>
+          </ul>
+          <div class="stepper" style="margin-bottom:12px">
+            <span class="tiny muted">席位</span>
+            <button id="seatM">−</button><b id="seat">12</b><button id="seatP">+</button>
+            <span class="tiny muted" id="seatFee">¥816 / 月</span>
+          </div>
+          <button class="btn" id="btnUp">升级为实验室版</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ptitle"><h3>用量看板</h3><span class="tag">组织维度计数 · 异步扣减 + 日终对账</span></div>
+        <div class="quota" id="quota"></div>
+        <p class="tiny muted" style="margin-top:10px">欠费只停止 AI 处理，不删除任何数据；到期后仍可导出 PDF、批注与卡片的开放格式包。</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer>
+  <b>ScholarFlow</b> · 静态演示原型，数据为示例文献（高效注意力方向 8 篇）。所有 AI 结论均带原文页码定位，示例页码用于演示溯源交互。
+</footer>
+
+<div class="mask" id="mask">
+  <div class="modal">
+    <h3 id="mkTitle">强制连线</h3>
+    <p class="tiny muted" id="mkDesc"></p>
+    <textarea id="mkInput" placeholder="填写相似理由，例如：均为线性复杂度注意力，均未互相引用"></textarea>
+    <div class="foot">
+      <button class="btn ghost" id="mkCancel">取消</button>
+      <button class="btn" id="mkOk">确认</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+var $ = function(s,r){return (r||document).querySelector(s);};
+var $$ = function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));};
+
+function toast(msg){
+  var d=document.createElement('div'); d.textContent=msg; $('#toast').appendChild(d);
+  setTimeout(function(){ d.style.opacity='0'; d.style.transition='.4s'; setTimeout(function(){d.remove();},420); },2200);
+}
+function download(name,text,type){
+  var b=new Blob([text],{type:(type||'text/plain')+';charset=utf-8'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name;
+  document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},400);
+}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+/* ============ 数据 ============ */
+var PAPERS=[
+ {id:'p1',title:'Attention Is All You Need',authors:'Vaswani 等',year:2017,venue:'NeurIPS',pages:15,doi:'10.48550/arXiv.1706.03762',method:'全局自注意力',status:'已精读'},
+ {id:'p2',title:'Transformer-XL: Attentive Language Models Beyond a Fixed-Length Context',authors:'Dai 等',year:2019,venue:'ACL',pages:12,doi:'10.18653/v1/P19-1285',method:'片段级循环',status:'已精读'},
+ {id:'p3',title:'Reformer: The Efficient Transformer',authors:'Kitaev 等',year:2020,venue:'ICLR',pages:16,doi:'10.48550/arXiv.2001.04451',method:'LSH 哈希注意力',status:'已摘要'},
+ {id:'p4',title:'Linformer: Self-Attention with Linear Complexity',authors:'Wang 等',year:2020,venue:'arXiv',pages:14,doi:'10.48550/arXiv.2006.04768',method:'低秩线性注意力',status:'已摘要'},
+ {id:'p5',title:'Longformer: The Long-Document Transformer',authors:'Beltagy 等',year:2020,venue:'arXiv',pages:20,doi:'10.48550/arXiv.2004.05150',method:'滑动窗口+全局注意力',status:'精读中'},
+ {id:'p6',title:'BigBird: Transformers for Longer Sequences',authors:'Zaheer 等',year:2020,venue:'NeurIPS',pages:22,doi:'10.48550/arXiv.2007.14062',method:'窗口+随机+全局注意力',status:'已摘要'},
+ {id:'p7',title:'Rethinking Attention with Performers',authors:'Choromanski 等',year:2021,venue:'ICLR',pages:19,doi:'10.48550/arXiv.2009.14794',method:'核方法线性注意力',status:'未读'},
+ {id:'p8',title:'FlashAttention: Fast and Memory-Efficient Exact Attention',authors:'Dao 等',year:2022,venue:'NeurIPS',pages:13,doi:'10.48550/arXiv.2205.14135',method:'IO 感知精确注意力',status:'未读'}
+];
+var REF=[['p1','p2'],['p1','p3'],['p1','p4'],['p1','p5'],['p1','p6'],['p5','p6'],['p1','p7'],['p1','p8']];
+var SHORT={p1:'Transformer',p2:'Transformer-XL',p3:'Reformer',p4:'Linformer',p5:'Longformer',p6:'BigBird',p7:'Performer',p8:'FlashAttention'};
+
+var SUMMARY={
+ p5:{
+  one:[{t:'用滑动窗口注意力叠加任务驱动的全局注意力，把复杂度由 O(n²) 降到 O(n)，长文档任务稳定超过 RoBERTa。',p:1}],
+  pts:[
+   {t:'标准自注意力随序列长度平方增长，4096 token 以上显存与算力不可承受，长文档建模被迫截断。',p:1},
+   {t:'滑动窗口注意力让每个 token 只关注固定宽度邻域，复杂度随长度线性增长，可按层递增窗口宽度。',p:3},
+   {t:'对问答等任务在少数特殊 token 上加全局注意力，保证任务所需的信息通路不被窗口切断。',p:4},
+   {t:'在 WikiHop、TriviaQA 与长文档分类上超过 RoBERTa，窗口越宽收益越高， dilation 窗口可少层扩感受野。',p:9}
+  ],
+  bd:{
+   '研究问题':[{t:'长文档建模需要在不截断的前提下控制注意力计算量。',p:1}],
+   '方法':[{t:'滑动窗口注意力（可多层递增、可空洞化）＋ 任务驱动的全局注意力 token。',p:3},{t:'以 RoBERTa 权重初始化并扩展位置编码至 4096。',p:5}],
+   '实验':[{t:'WikiHop / TriviaQA / HotpotQA 与长文档分类；随窗口增大单调提升。',p:9}],
+   '结论与局限':[{t:'长文档任务全面优于 RoBERTa；但全局 token 需人工指定，且生成式任务收益弱于编码式任务。',p:12}]
+  }
+ },
+ p1:{
+  one:[{t:'完全基于注意力的编解码结构取代循环与卷积，翻译质量与训练并行度同时显著提升。',p:1}],
+  pts:[
+   {t:'循环结构依赖上一步隐状态，无法在序列内并行，长程依赖路径长度为 O(n)。',p:2},
+   {t:'多头自注意力单层即可建立任意两位置间的直接通路，路径长度为 O(1)。',p:4},
+   {t:'以正弦位置编码注入顺序信息，配合残差与层归一化稳定深层训练。',p:5},
+   {t:'WMT 2014 英德 28.4 BLEU，英法 41.8 BLEU，训练成本低于当时最好系统一个量级。',p:9}
+  ],
+  bd:{
+   '研究问题':[{t:'如何在保证翻译质量的同时最大化训练并行度。',p:2}],
+   '方法':[{t:'多头缩放点积注意力 + 位置前馈层，编码器 6 层、解码器 6 层，残差连接与层归一化。',p:3}],
+   '实验':[{t:'WMT 2014 英德 / 英法，注意力头数与维度 ablation。',p:8}],
+   '结论与局限':[{t:'纯注意力结构可行且高效；但复杂度随长度平方增长，长序列不可用。',p:10}]
+  }
+ },
+ p6:{
+  one:[{t:'窗口 + 随机 + 全局三类注意力组合，在保持图灵完备近似能力的同时把复杂度降到线性。',p:2}],
+  pts:[
+   {t:'证明稀疏注意力与随机注意力在图灵完备性与序列函数近似上仍具表达能力。',p:4},
+   {t:'组合窗口、随机、全局三种模式，兼顾局部性、连通性与任务 token 通路。',p:6},
+   {t:'在长文档摘要与问答上超过 RoBERTa 与 Longformer 基线，支持 4096 以上长度。',p:12}
+  ],
+  bd:{
+   '研究问题':[{t:'稀疏注意力是否损失理论表达能力，如何兼顾效率与效果。',p:3}],
+   '方法':[{t:'窗口 + 随机 + 全局注意力三元组，并给出理论近似性证明。',p:6}],
+   '实验':[{t:'长文档摘要、问答与基因组序列任务。',p:12}],
+   '结论与局限':[{t:'理论上有界且实践有效；随机模式带来额外实现复杂度，工程落地成本高。',p:15}]
+  }
+ },
+ p7:{
+  one:[{t:'以正交随机特征（FAVOR+）无偏近似 softmax 注意力，复杂度线性且可直接替换已有注意力层。',p:2}],
+  pts:[
+   {t:'softmax 注意力需要显式计算 n×n 矩阵，是长序列的主要瓶颈。',p:2},
+   {t:'FAVOR+ 用正交随机特征近似核函数，给出无偏性与集中性保证。',p:5},
+   {t:'可与其它稀疏技巧组合，在蛋白质序列与长程竞技场基准上保持竞争力。',p:11}
+  ],
+  bd:{
+   '研究问题':[{t:'能否在不显式构造注意力矩阵的前提下近似 softmax 注意力。',p:2}],
+   '方法':[{t:'正交随机特征 FAVOR+，核化线性注意力，兼容双向与因果掩码。',p:5}],
+   '实验':[{t:'Long-Range Arena、蛋白质序列建模，与稀疏注意力组合测试。',p:11}],
+   '结论与局限':[{t:'线性复杂度且易替换；近似误差在长上下文上累积，精确任务仍弱于精确注意力。',p:14}]
+  }
+ }
+};
+function fallbackSummary(p){
+ return {
+  one:[{t:'围绕'+p.method+'展开，在'+p.venue+' '+p.year+'上报告了对基线方法的改进。',p:1}],
+  pts:[
+   {t:'现有方法在长序列或大规模场景下存在算力与显存瓶颈。',p:2},
+   {t:'本文以'+p.method+'重构注意力计算路径，降低复杂度。',p:4},
+   {t:'在公开基准上给出与同类方法的系统对比。',p:8}
+  ],
+  bd:{
+   '研究问题':[{t:'如何在效率与效果之间取得可验证的平衡。',p:2}],
+   '方法':[{t:p.method+'，并给出复杂度分析与实现细节。',p:4}],
+   '实验':[{t:'公开基准对比与消融实验。',p:8}],
+   '结论与局限':[{t:'在报告的设置下有效；泛化性与工程成本仍需独立复现。',p:11}]
+  }
+ };
+}
+function getSummary(id){
+ if(!SUMMARY[id]) SUMMARY[id]=fallbackSummary(PAPERS.filter(function(x){return x.id===id;})[0]||PAPERS[0]);
+ return SUMMARY[id];
+}
+function spansFor(p){
+ var m=p.method;
+ return [
+  {p:1,t:'本文针对长序列建模的效率瓶颈，提出以'+m+'替代完整的两两注意力计算，并在标准基准上验证。'},
+  {p:2,t:'相关工作：此前的高效注意力方案在复杂度、实现成本或表达能力的三者权衡上均有取舍。'},
+  {p:3,t:'方法部分给出注意力矩阵的重构方式，并说明复杂度由平方降为线性的推导过程。'},
+  {p:5,t:'实验设置沿用前人配置，位置编码扩展至 4096，保证与基线可比。'},
+  {p:8,t:'表 3 报告主要结果：在长文档任务上相对基线有稳定增益，窗口或近似误差对结果敏感。'},
+  {p:9,t:'消融显示，局部性与全局通路的配置决定收益上限，需在任务上重新调参。'},
+  {p:12,t:'结论：方法在其设定下有效，但全局 token 的指定与近似误差仍是限制因素。'}
+ ];
+}
+
+/* ============ 01 导入 ============ */
+var LIB=PAPERS.slice();
+var queue=[]; var qTimer=null;
+function renderLib(){
+  $('#libbody').innerHTML=LIB.map(function(p){
+   return '<tr data-id="'+p.id+'"><td>'+esc(p.title)+'</td><td>'+esc(p.authors)+'</td><td>'+p.year+'</td><td>'+esc(p.venue)+'</td><td><span class="pill">'+esc(p.method)+'</span></td><td>'+(p.dup?'<span class="pill warn">待确认重复</span>':'<span class="pill">'+esc(p.status)+'</span>')+'</td></tr>';
+  }).join('');
+  $('#libcount').textContent=LIB.length+' 篇';
+  $('#st1').textContent=LIB.length+' 篇';
+  $('#st2').textContent=LIB.reduce(function(a,b){return a+b.pages;},0)+' 页';
+  $('#st3').textContent=LIB.filter(function(p){return p.status==='未读';}).length+' 篇';
+}
+function renderQ(){
+  var box=$('#qlist');
+  $('#qcount').textContent=queue.length+' 项';
+  if(!queue.length){ box.innerHTML='<p class="tiny muted" style="padding:10px 0">暂无任务。</p>'; return; }
+  box.innerHTML=queue.map(function(f){
+   return '<div class="qrow"><span>'+esc(f.name)+'</span><span class="tiny muted">'+f.size+'</span>'+
+    '<span class="tiny">'+(f.dup?'<span class="pill warn">待确认重复</span>':'<span class="pill '+(f.prog>=100?'ok':'')+'">'+esc(f.status)+'</span>')+'</span>'+
+    '<span><span class="bar"><i style="width:'+f.prog+'%"></i></span></span></div>';
+  }).join('');
+}
+function isDup(name){
+  var key=name.replace(/\.(pdf|PDF)$/,'').split(/[_-\s]/)[0].toLowerCase();
+  return LIB.some(function(p){ return p.title.toLowerCase().indexOf(key)===0; });
+}
+function pushFiles(names){
+  names.forEach(function(n){
+   queue.push({name:n,size:(1.2+Math.random()*7).toFixed(1)+' MB',prog:0,status:'排队中',dup:isDup(n)});
+  });
+  renderQ();
+  if(!qTimer) qTimer=setInterval(tick,140);
+}
+function tick(){
+  var active=queue.filter(function(f){return f.prog<100;});
+  if(!active.length){ clearInterval(qTimer); qTimer=null; toast('本批解析完成，已写入元数据'); return; }
+  active.slice(0,3).forEach(function(f){
+    f.prog=Math.min(100,f.prog+(6+Math.random()*13));
+    f.status=f.prog<32?'解析文本层':(f.prog<66?'抽取参考文献':(f.prog<95?'生成元数据':'完成'));
+    if(f.prog>=100){
+      LIB.push({id:'n'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+        title:f.name.replace(/\.(pdf|PDF)$/,''),authors:'待校对',year:2026,venue:'待校对',pages:Math.round(8+Math.random()*14),doi:'—',method:'待打标签',status:'未读',dup:f.dup});
+      renderLib();
+    }
+  });
+  renderQ();
+}
+$('#drop').addEventListener('click',function(){ pushFiles(SAMPLE()); });
+$('#btnSample').addEventListener('click',function(){ pushFiles(SAMPLE()); });
+function SAMPLE(){
+ return ['Performer_ICLR2021.pdf','Longformer_arXiv2004.pdf','Longformer_arXiv2004.pdf','高效注意力综述_扫描版.pdf','FlashAttention_NeurIPS2022.pdf'];
+}
+$('#drop').addEventListener('dragover',function(e){e.preventDefault(); this.classList.add('over');});
+$('#drop').addEventListener('dragleave',function(){this.classList.remove('over');});
+$('#drop').addEventListener('drop',function(e){
+ e.preventDefault(); this.classList.remove('over');
+ var fs=e.dataTransfer&&e.dataTransfer.files;
+ if(fs&&fs.length) pushFiles(Array.prototype.slice.call(fs).slice(0,50).map(function(f){return f.name;}));
+ else pushFiles(SAMPLE());
+});
+$('#btnProof').addEventListener('click',function(){
+ var on=this.dataset.on==='1';
+ $$('#libbody td').forEach(function(td,i){ if(i%6!==4) td.setAttribute('contenteditable', on?'false':'true'); });
+ this.dataset.on=on?'0':'1'; this.textContent=on?'开启元数据校对':'保存校对结果';
+ toast(on?'校对结果已保存':'单元格已可编辑');
+});
+
+/* ============ 02 摘要 ============ */
+var curPaper='p5';
+function fillPick(){
+ $('#sumPick').innerHTML=LIB.map(function(p){return '<option value="'+p.id+'">'+esc(p.title.slice(0,46))+(p.title.length>46?'…':'')+'</option>';}).join('');
+ $('#sumPick').value=curPaper;
+}
+$('#sumPick').addEventListener('change',function(){ curPaper=this.value; renderSummary(); renderCards(); });
+$('#btnGen').addEventListener('click',function(){
+ var bar=$('#genBar'), stages=$$('#stage span');
+ bar.style.width='0%'; stages.forEach(function(s){s.classList.remove('on');});
+ var i=0; var iv=setInterval(function(){
+   if(i<stages.length){
+     stages[i].classList.add('on');
+     bar.style.width=((i+1)*33)+'%'; i++;
+     $('#genHint').textContent='生成中：已完成 '+i+' / 3 层，正在做页码绑定与 JSON Schema 校验…';
+   } else {
+     clearInterval(iv);
+     $('#genHint').textContent='生成完成 · 结论 '+countSents()+' 条，全部绑定原文页码，未出现无出处结论。';
+     renderSummary(); renderCards(); toast('三层摘要已生成');
+   }
+ },700);
+});
+function countSents(){
+ var s=getSummary(curPaper); return 1+s.pts.length+Object.keys(s.bd).reduce(function(a,k){return a+s.bd[k].length;},0);
+}
+$('#btnEdit').addEventListener('click',function(){
+ var on=this.dataset.on==='1';
+ $$('#l1 .body,#l2 .body,#l3 .body').forEach(function(el){el.setAttribute('contenteditable', on?'false':'true');});
+ this.dataset.on=on?'0':'1'; this.textContent=on?'保存并留版本':'编辑';
+ if(on){ toast('已保存为新版本，可回滚'); }
+});
+function renderSummary(){
+ var s=getSummary(curPaper), p=LIB.filter(function(x){return x.id===curPaper;})[0];
+ $('#l1').innerHTML='<div class="body">'+s.one.map(function(x){return '<p class="sent">'+esc(x.t)+'<span class="pagechip" data-p="'+x.p+'">p.'+x.p+'</span></p>';}).join('')+'</div>';
+ $('#l2').innerHTML='<div class="body">'+s.pts.map(function(x){return '<p class="sent">'+esc(x.t)+'<span class="pagechip" data-p="'+x.p+'">p.'+x.p+'</span></p>';}).join('')+'</div>';
+ $('#l3').innerHTML='<div class="body">'+Object.keys(s.bd).map(function(k){
+    return '<div class="bd"><h4>'+esc(k)+'</h4>'+s.bd[k].map(function(x){return '<p class="sent">'+esc(x.t)+'<span class="pagechip" data-p="'+x.p+'">p.'+x.p+'</span></p>';}).join('')+'</div>';
+  }).join('')+'</div>';
+ $('#srcPane').innerHTML=spansFor(p).map(function(sp){
+    return '<div class="sp" data-p="'+sp.p+'"><span class="pg">P'+sp.p+' · 第 '+sp.p+' 页</span>'+esc(sp.t)+'</div>';
+  }).join('');
+ bindChips();
+}
+function bindChips(){
+ $$('.pagechip').forEach(function(c){
+  c.addEventListener('click',function(){
+   var p=c.dataset.p;
+   $$('#srcPane .sp').forEach(function(sp){ sp.classList.toggle('on', sp.dataset.p===p); });
+   var t=$('#srcPane .sp[data-p="'+p+'"]');
+   if(t) $('#srcPane').scrollTo({top:t.offsetTop-10,behavior:'smooth'});
+   $('#srcHint').textContent='已定位 p.'+p+'（bbox 绑定）';
+  });
+ });
+}
+$$('.tabs button').forEach(function(b){
+ b.addEventListener('click',function(){
+   $$('.tabs button').forEach(function(x){x.classList.remove('on');});
+   $$('.layer').forEach(function(x){x.classList.remove('on');});
+   b.classList.add('on'); $('#'+b.dataset.l).classList.add('on');
+ });
+});
+
+/* ============ 03 四栏卡 ============ */
+var pool=[];
+function renderCards(){
+ var p=LIB.filter(function(x){return x.id===curPaper;})[0]||LIB[0], s=getSummary(p.id);
+ $('#cardTitle').textContent=p.title;
+ var keys=['研究问题','方法','实验','结论与局限'];
+ $('#cards4').innerHTML=keys.map(function(k,i){
+   var items=s.bd[k]||[{t:'—',p:1}];
+   var links=(k==='结论与局限')? '<div class="links tiny muted">关联改进：<a href="#m4" data-impr="1">查看后续论文如何补这一局限 →</a></div>':'';
+   return '<div class="c4"><h4>'+esc(k)+'<em>'+items.length+' 条</em></h4><div class="body" data-k="'+esc(k)+'">'+
+     items.map(function(x){return '<div>'+esc(x.t)+'<span class="pagechip" data-p="'+x.p+'">p.'+x.p+'</span></div>';}).join('')+
+     '</div>'+links+'</div>';
+ }).join('');
+ bindChips();
+}
+$('#btnCardEdit').addEventListener('click',function(){
+ var on=this.dataset.on==='1';
+ $$('#cards4 .body').forEach(function(el){el.setAttribute('contenteditable', on?'false':'true');});
+ this.dataset.on=on?'0':'1'; this.textContent=on?'保存卡片':'编辑四栏';
+ if(on) toast('卡片已保存（本地自动保存，断网不丢）');
+});
+$('#btnPool').addEventListener('click',function(){
+ pool.push(curPaper); toast('已加入综述素材池（'+pool.length+'）');
+});
+$('#btnExpMd').addEventListener('click',function(){
+ var p=LIB.filter(function(x){return x.id===curPaper;})[0], s=getSummary(p.id);
+ var md='# '+p.title+'\n\n'+p.authors+' · '+p.venue+' '+p.year+'\n\n'+
+  '## 问题\n'+s.bd['研究问题'].map(function(x){return '- '+x.t+'（p.'+x.p+'）';}).join('\n')+'\n\n'+
+  '## 方法\n'+s.bd['方法'].map(function(x){return '- '+x.t+'（p.'+x.p+'）';}).join('\n')+'\n\n'+
+  '## 实验\n'+s.bd['实验'].map(function(x){return '- '+x.t+'（p.'+x.p+'）';}).join('\n')+'\n\n'+
+  '## 结论与局限\n'+s.bd['结论与局限'].map(function(x){return '- '+x.t+'（p.'+x.p+'）';}).join('\n')+'\n';
+ download(p.id+'_card.md',md,'text/markdown');
+});
+$('#btnExpBib').addEventListener('click',function(){
+ var p=LIB.filter(function(x){return x.id===curPaper;})[0];
+ download(p.id+'.bib','@article{'+p.id+',\n  title={'+p.title+'},\n  author={'+p.authors+'},\n  year={'+p.year+'},\n  journal={'+p.venue+'},\n  doi={'+p.doi+'}\n}\n','text/plain');
+});
+$('#btnExpCsv').addEventListener('click',function(){
+ var rows=LIB.map(function(p){var s=getSummary(p.id);
+  return [p.title,p.authors,p.year,p.venue,(s.bd['研究问题'][0]||{}).t,(s.bd['方法'][0]||{}).t,(s.bd['结论与局限'][0]||{}).t].join('\t');});
+ download('cards.tsv','标题\t作者\t年份\t期刊\t问题\t方法\t结论与局限\n'+rows.join('\n'),'text/tab-separated-values');
+});
+
+/* ============ 04 脉络图 ============ */
+var SVG='http://www.w3.org/2000/svg';
+var NODES={}, EDGES=[], USER_EDGES=[], LAYOUT={}, LOCKED=false, sel=[];
+var POS={
+ p1:{x:70,y:250},p2:{x:225,y:120},p3:{x:400,y:62},p4:{x:400,y:168},p5:{x:400,y:272},p6:{x:400,y:392},
+ p7:{x:615,y:330},p8:{x:820,y:430}
+};
+function initGraph(){
+ PAPERS.forEach(function(p){ NODES[p.id]=p; LAYOUT[p.id]={x:POS[p.id].x,y:POS[p.id].y}; });
+ EDGES=REF.map(function(e){return {from:e[0],to:e[1],src:'ref'};});
+ USER_EDGES=[]; drawGraph();
+}
+function el(tag,attrs){
+ var e=document.createElementNS(SVG,tag);
+ for(var k in attrs) e.setAttribute(k,attrs[k]);
+ return e;
+}
+function pathOf(a,b){
+ var x1=LAYOUT[a].x,y1=LAYOUT[a].y,x2=LAYOUT[b].x,y2=LAYOUT[b].y;
+ var mx=(x1+x2)/2, my=(y1+y2)/2 - Math.abs(x2-x1)*0.12;
+ return 'M'+x1+','+y1+' Q'+mx+','+my+' '+x2+','+y2;
+}
+function drawGraph(){
+ var g=$('#graph'); g.innerHTML='';
+ var defs=el('defs',{});
+ ['#B9B2A1','#8A6D3B'].forEach(function(c,i){
+   var m=el('marker',{id:'ar'+i,viewBox:'0 0 8 8',refX:'7',refY:'4',markerWidth:'6',markerHeight:'6',orient:'auto'});
+   m.appendChild(el('path',{d:'M0,0 L8,4 L0,8 z',fill:c})); defs.appendChild(m);
+ });
+ g.appendChild(defs);
+ var all=EDGES.concat(USER_EDGES);
+ all.forEach(function(e){
+   var isU=e.src==='user';
+   var p=el('path',{d:pathOf(e.from,e.to),'class':'edge'+(isU?' user':''),'marker-end':'url(#ar'+(isU?1:0)+')'});
+   g.appendChild(p);
+   if(isU){
+     var mx=(LAYOUT[e.from].x+LAYOUT[e.to].x)/2, my=(LAYOUT[e.from].y+LAYOUT[e.to].y)/2-Math.abs(LAYOUT[e.to].x-LAYOUT[e.from].x)*0.12;
+     var t=el('text',{x:mx,y:my-6,'class':'elabel','text-anchor':'middle'});
+     t.textContent='疑似方法相似'; g.appendChild(t);
+   }
+ });
+ Object.keys(LAYOUT).forEach(function(id){
+   var p=NODES[id], L=LAYOUT[id];
+   var grp=el('g',{'class':'nd'+(sel.indexOf(id)>=0?' sel':''),transform:'translate('+L.x+','+L.y+')','data-id':id});
+   grp.appendChild(el('circle',{r:22,cy:0,cx:0}));
+   var yr=el('text',{'class':'yr',y:4}); yr.textContent=String(p.year).slice(2); grp.appendChild(yr);
+   var words=SHORT[id]||p.title.slice(0,10);
+   var t1=el('text',{y:38}); t1.textContent=words.slice(0,13); grp.appendChild(t1);
+   if(words.length>13){ var t2=el('text',{y:51}); t2.textContent=words.slice(13); grp.appendChild(t2); }
+   g.appendChild(grp);
+ });
+ bindNodes();
+}
+function bindNodes(){
+ $$('#graph .nd').forEach(function(n){
+  var id=n.dataset.id, dragging=false, moved=false, sx=0, sy=0, ox=0, oy=0, pt=null;
+  n.addEventListener('pointerdown',function(e){
+    if(LOCKED) return;
+    dragging=true; moved=false;
+    var r=$('#graph').getBoundingClientRect();
+    var vb=$('#graph').viewBox.baseVal;
+    var sc=Math.min(r.width/vb.width, r.height/vb.height);
+    pt=function(ev){ return {x:(ev.clientX-r.left)/sc, y:(ev.clientY-r.top)/sc}; };
+    var s=pt(e); sx=s.x; sy=s.y; ox=LAYOUT[id].x; oy=LAYOUT[id].y;
+    n.setPointerCapture(e.pointerId);
+  });
+  n.addEventListener('pointermove',function(e){
+    if(!dragging||!pt) return;
+    var s=pt(e);
+    if(Math.abs(s.x-sx)>2||Math.abs(s.y-sy)>2) moved=true;
+    LAYOUT[id].x=Math.max(30,Math.min(870,ox+s.x-sx));
+    LAYOUT[id].y=Math.max(28,Math.min(492,oy+s.y-sy));
+    n.setAttribute('transform','translate('+LAYOUT[id].x+','+LAYOUT[id].y+')');
+    drawEdgesOnly();
+  });
+  n.addEventListener('pointerup',function(e){
+    if(!dragging) return;
+    dragging=false;
+    if(!moved){ pick(id); return; }
+    drawGraph(); toast('节点位置已手动覆盖并保存');
+  });
+ });
+}
+function drawEdgesOnly(){
+ var g=$('#graph');
+ var paths=$$('#graph path.edge'); var all=EDGES.concat(USER_EDGES);
+ paths.forEach(function(p,i){ if(all[i]) p.setAttribute('d',pathOf(all[i].from,all[i].to)); });
+ var labs=$$('#graph text.elabel');
+ labs.forEach(function(t,i){
+   var e=USER_EDGES[i]; if(!e) return;
+   t.setAttribute('x',(LAYOUT[e.from].x+LAYOUT[e.to].x)/2);
+   t.setAttribute('y',(LAYOUT[e.from].y+LAYOUT[e.to].y)/2-Math.abs(LAYOUT[e.to].x-LAYOUT[e.from].x)*0.12-6);
+ });
+}
+function pick(id){
+ if(sel.indexOf(id)>=0){ sel=sel.filter(function(x){return x!==id;}); }
+ else { sel.push(id); if(sel.length>2) sel=sel.slice(-2); }
+ drawGraph();
+ $('#btnLink').disabled=sel.length!==2;
+ renderNodeInfo();
+}
+function renderNodeInfo(){
+ var box=$('#nodeInfo'), chain=$('#chain'), cand=$('#cand');
+ if(!sel.length){ box.innerHTML='<p class="tiny muted">未选中节点。</p>'; chain.innerHTML='<span class="tiny muted">选中节点后展示其引用上下游。</span>'; cand.innerHTML='<p class="tiny muted">选中节点后推荐。</p>'; return; }
+ var id=sel[sel.length-1], p=NODES[id];
+ var up=EDGES.filter(function(e){return e.to===id;}).map(function(e){return e.from;});
+ var down=EDGES.filter(function(e){return e.from===id;}).map(function(e){return e.to;});
+ var ul=USER_EDGES.filter(function(e){return e.from===id||e.to===id;});
+ box.innerHTML='<div style="font-family:var(--serif);font-size:15px">'+esc(p.title)+'</div>'+
+  '<div class="tiny muted" style="margin:4px 0 8px">'+esc(p.authors)+' · '+esc(p.venue)+' '+p.year+' · '+p.pages+' 页</div>'+
+  '<div><span class="pill">'+esc(p.method)+'</span></div>'+
+  '<div class="tiny" style="margin-top:10px">被引（上游）：'+(up.length?up.map(function(x){return SHORT[x];}).join('、'):'—')+'</div>'+
+  '<div class="tiny">引用（下游）：'+(down.length?down.map(function(x){return SHORT[x];}).join('、'):'—')+'</div>'+
+  '<div class="tiny">人工连线：'+(ul.length?ul.map(function(e){return SHORT[e.from]+' ↔ '+SHORT[e.to]+'（'+esc(e.why)+'）';}).join('；'):'—')+'</div>';
+ chain.innerHTML=buildChain(id);
+ var cands=candidates(id).slice(0,5);
+ cand.innerHTML=cands.length? cands.map(function(c){
+   return '<div class="tiny" style="margin-bottom:6px">'+SHORT[c.id]+' · 相似度 '+(c.s*100).toFixed(0)+'% '+
+     '<button class="btn mini" data-a="'+id+'" data-b="'+c.id+'">连线</button></div>';
+ }).join('') : '<p class="tiny muted">暂无高相似候选。</p>';
+ $$('#cand button').forEach(function(b){
+   b.addEventListener('click',function(){ sel=[b.dataset.a,b.dataset.b]; drawGraph(); openLinkModal(); });
+ });
+}
+function buildChain(id){
+ var up=[],down=[],seen={};
+ (function walkUp(i,d){ if(d>4) return; EDGES.filter(function(e){return e.to===i;}).forEach(function(e){
+    if(!seen[e.from]){seen[e.from]=1; up.unshift(e.from); walkUp(e.from,d+1);} }); })(id,0);
+ (function walkDn(i,d){ if(d>4) return; EDGES.filter(function(e){return e.from===i;}).forEach(function(e){
+    if(!seen[e.to]){seen[e.to]=1; down.push(e.to); walkDn(e.to,d+1);} }); })(id,0);
+ if(!up.length&&!down.length) return '<span class="tiny muted">该节点暂无 ref 边。</span>';
+ return up.concat([id]).concat(down).map(function(x){
+   return '<span class="pill'+(x===id?' gold':'')+'">'+SHORT[x]+' '+NODES[x].year+'</span>';
+ }).join('<i>→</i>');
+}
+function candidates(id){
+ var base=NODES[id].method;
+ return Object.keys(NODES).filter(function(x){return x!==id;}).map(function(x){
+   var m=NODES[x].method, share=0;
+   for(var i=0;i<m.length;i++) if(base.indexOf(m[i])>=0) share++;
+   var linked=EDGES.concat(USER_EDGES).some(function(e){return (e.from===id&&e.to===x)||(e.to===id&&e.from===x);});
+   return {id:x,s:linked?0:(0.42+share*0.06+Math.abs(NODES[x].year-NODES[id].year)*0.02)};
+ }).filter(function(c){return c.s>0;}).sort(function(a,b){return b.s-a.s;});
+}
+function openLinkModal(){
+ if(sel.length!==2){ toast('请先选中两个节点'); return; }
+ $('#mkTitle').textContent='强制连线';
+ $('#mkDesc').textContent=SHORT[sel[0]]+' ↔ '+SHORT[sel[1]]+'：两篇之间无引用关系，连线后将标注「疑似方法相似」并记录创建人与理由。';
+ $('#mkInput').value='';
+ $('#mask').classList.add('on');
+ $('#mkOk').dataset.mode='link';
+}
+$('#btnLink').addEventListener('click',openLinkModal);
+$('#mkCancel').addEventListener('click',function(){ $('#mask').classList.remove('on'); });
+$('#mkOk').addEventListener('click',function(){
+ var why=$('#mkInput').value.trim()||'未填写理由';
+ if(this.dataset.mode==='link'&&sel.length===2){
+   USER_EDGES.push({from:sel[0],to:sel[1],src:'user',why:why,by:'我'});
+   toast('已强制连线并标注「疑似方法相似」');
+   sel=[USER_EDGES[USER_EDGES.length-1].from]; $('#btnLink').disabled=true; drawGraph(); renderNodeInfo();
+ }
+ if(this.dataset.mode==='del'&&sel.length){
+   var id=sel[sel.length-1];
+   var n=(EDGES.filter(function(e){return e.from===id||e.to===id;}).length)+(USER_EDGES.filter(function(e){return e.from===id||e.to===id;}).length);
+   delete LAYOUT[id]; delete NODES[id];
+   EDGES=EDGES.filter(function(e){return e.from!==id&&e.to!==id;});
+   USER_EDGES=USER_EDGES.filter(function(e){return e.from!==id&&e.to!==id;});
+   sel=[]; drawGraph(); renderNodeInfo();
+   toast('已删除 '+SHORT[id]+'，并处理关联边 '+n+' 条（事前已列出）');
+ }
+ $('#mask').classList.remove('on');
+});
+$('#btnUndo').addEventListener('click',function(){
+ if(!USER_EDGES.length){ toast('没有可撤销的人工连线'); return; }
+ var e=USER_EDGES.pop(); drawGraph(); renderNodeInfo();
+ toast('已撤销：'+SHORT[e.from]+' ↔ '+SHORT[e.to]);
+});
+$('#btnLock').addEventListener('click',function(){
+ LOCKED=!LOCKED; this.textContent=LOCKED?'已锁定（解锁）':'锁定布局'; toast(LOCKED?'布局已锁定，拖拽禁用':'布局已解锁');
+});
+$('#btnSaveView').addEventListener('click',function(){ toast('视图已保存（个人视图 / 小组视图各一份）'); });
+$('#btnReset').addEventListener('click',function(){
+ PAPERS.forEach(function(p){ if(LAYOUT[p.id]){LAYOUT[p.id]={x:POS[p.id].x,y:POS[p.id].y};} });
+ LOCKED=false; $('#btnLock').textContent='锁定布局'; drawGraph(); toast('已复位为自动生成布局');
+});
+$('#btnDelNode').addEventListener('click',function(){
+ if(!sel.length){ toast('请先选中一个节点'); return; }
+ var id=sel[sel.length-1];
+ var re=EDGES.filter(function(e){return e.from===id||e.to===id;}).length;
+ var ue=USER_EDGES.filter(function(e){return e.from===id||e.to===id;}).length;
+ $('#mkTitle').textContent='删除论文前的关联边确认';
+ $('#mkDesc').textContent='删除「'+SHORT[id]+'」将影响：引用边 '+re+' 条、人工连线 '+ue+' 条（含「疑似方法相似」标注）。删除后这些边一并移除，不会静默处理。';
+ $('#mkInput').value='';
+ $('#mask').classList.add('on'); $('#mkOk').dataset.mode='del';
+});
+
+/* ============ 05 共读小组 ============ */
+var MEMBERS=['周','李','王','陈','赵','孙','吴','郑','冯','许','何','吕'];
+var PARAS=[
+ {id:'a1',p:1,t:'本文提出一种随序列长度线性增长的注意力机制，用以替代标准自注意力的平方复杂度计算，从而支持数千 token 的长文档输入。'},
+ {id:'a2',p:3,t:'滑动窗口注意力为每个 token 保留固定宽度的邻域上下文；窗口宽度可按层递增，使高层获得更大的有效感受野。'},
+ {id:'a3',p:4,t:'对问答类任务，我们在问题 token 与候选答案 token 上施加全局注意力，由任务语义决定全局 token 的位置。'},
+ {id:'a4',p:9,t:'表 3 显示，窗口宽度由 64 增至 512 时 WikiHop 准确率单调提升，但显存占用同步上升，需要按任务重新权衡。'},
+ {id:'a5',p:12,t:'局限在于全局 token 需人工指定，且该方法在生成式任务上的收益弱于编码式任务，长上下文生成仍是开放问题。'}
+];
+var ANNS=[
+ {id:1,para:'a2',who:'周 (我)',t:'这里“按层递增窗口”与我们复现时的显存曲线是否一致？我这边 12 层 512 窗口就 OOM 了。',reps:[{who:'李',t:'同，需要配合梯度检查点，第 9 页有显存对照表。'}],stale:false},
+ {id:2,para:'a3',who:'王',t:'全局 token 的指定方式是否等于引入了任务先验？如果换数据集要重新标注吗？',reps:[],stale:false},
+ {id:3,para:'a5',who:'陈',t:'这条局限正好是我们下一次要选篇的方向，建议纳入综述的“开放问题”一节。',reps:[{who:'赵',t:'同意，可和 BigBird 的随机注意力风险对比。'}],stale:false},
+ {id:4,para:'a4',who:'孙',t:'@周 请把 512 窗口的显存数字补到共享表格里。',reps:[],stale:false}
+];
+var DECIDES=[
+ {t:'是否把「全局 token 人工指定」列为选题一：「任务驱动的全局注意力自动化」',by:'陈'},
+ {t:'复现基准统一为 4096 长度、窗口 512，本周内由周同学提交',by:'李'}
+];
+var ARCH=[];
+function renderGroup(){
+ $('#members').innerHTML=MEMBERS.map(function(m,i){
+   return '<span class="av'+(i<9?' online':' off')+'" title="'+(i<9?'在线':'离线')+'">'+m+'</span>';
+ }).join('')+'<span class="tiny muted" style="margin-left:6px">+38 人在线</span>';
+ $('#paras').innerHTML=PARAS.map(function(p){
+   var list=ANNS.filter(function(a){return a.para===p.id;});
+   return '<div class="para" data-id="'+p.id+'"><div class="txt">'+esc(p.t)+'</div>'+
+    '<div class="meta"><span class="pagechip" data-p="'+p.p+'">p.'+p.p+'</span>'+
+    '<span>'+list.length+' 条批注</span>'+
+    '<button class="btn mini" data-add="'+p.id+'">加批注</button>'+
+    '<button class="btn mini" data-arch="'+p.id+'">归档该段批注</button></div>'+
+    list.map(function(a){
+      return '<div class="ann'+(a.stale?' stale':'')+'"><div>'+esc(a.t)+
+        (a.stale?' <span class="pill warn">锚点失效</span>':'')+
+        ' <button class="btn mini" data-rep="'+a.id+'">回复</button>'+
+        ' <button class="btn mini" data-dec="'+a.id+'">收敛为待决议</button></div>'+
+        '<div class="who">'+esc(a.who)+' · 锚定 P'+PARAS.filter(function(x){return x.id===a.para;})[0].p+'</div>'+
+        a.reps.map(function(r){return '<div class="rep">'+esc(r.t)+' <span class="tiny muted">— '+esc(r.who)+'</span></div>';}).join('')+
+        '</div>';
+    }).join('')+'</div>';
+ }).join('');
+ $('#decList').innerHTML=DECIDES.map(function(d){return '<div class="decide">'+esc(d.t)+'<div class="tiny muted">提出：'+esc(d.by)+'</div></div>';}).join('');
+ $('#decCount').textContent=DECIDES.length;
+ $('#archList').innerHTML=ARCH.length?ARCH.map(function(a){return '<div class="tiny" style="margin-bottom:6px">'+esc(a.t)+' <span class="pill">已归档</span></div>';}).join(''):'<p class="tiny muted">暂无归档。</p>';
+ $$('#paras button[data-add]').forEach(function(b){ b.addEventListener('click',function(){
+   var t=window.prompt('在 P'+PARAS.filter(function(x){return x.id===b.dataset.add;})[0].p+' 上新增段落级批注：','');
+   if(t){ ANNS.push({id:Date.now(),para:b.dataset.add,who:'周 (我)',t:t,reps:[],stale:false}); renderGroup(); toast('批注已同步（延迟 < 300ms）'); }
+ });});
+ $$('#paras button[data-arch]').forEach(function(b){ b.addEventListener('click',function(){
+   var mv=ANNS.filter(function(a){return a.para===b.dataset.arch;});
+   ANNS=ANNS.filter(function(a){return a.para!==b.dataset.arch;});
+   ARCH=ARCH.concat(mv); renderGroup(); toast('已归档 '+mv.length+' 条批注（归档≠删除，可随时恢复）');
+ });});
+ $$('#paras button[data-rep]').forEach(function(b){ b.addEventListener('click',function(){
+   var id=+b.dataset.rep, t=window.prompt('回复该批注：','');
+   if(t){ ANNS.filter(function(a){return a.id===id;})[0].reps.push({who:'周 (我)',t:t}); renderGroup(); }
+ });});
+ $$('#paras button[data-dec]').forEach(function(b){ b.addEventListener('click',function(){
+   var a=ANNS.filter(function(x){return x.id===+b.dataset.dec;})[0];
+   if(a){ DECIDES.push({t:a.t,by:a.who}); renderGroup(); toast('已收敛为待决议'); }
+ });});
+ $$('#paras .pagechip').forEach(function(c){ c.addEventListener('click',function(){ toast('定位到 p.'+c.dataset.p); }); });
+}
+$('#btnSimUpdate').addEventListener('click',function(){
+ var n=0; ANNS.forEach(function(a,i){ if(i<2){ a.stale=true; n++; } });
+ renderGroup(); toast('原文版本已更新：'+n+' 条批注标记为「锚点失效」并保留，未删除');
+});
+$('#btnMinutes').addEventListener('click',function(){
+ var md='# 组会纪要 · 《Longformer》第 3 次精读\n\n'+
+  '## 待决议\n'+DECIDES.map(function(d,i){return (i+1)+'. '+d.t+'（'+d.by+'）';}).join('\n')+'\n\n'+
+  '## 段落级批注\n'+ANNS.map(function(a){
+    var p=PARAS.filter(function(x){return x.id===a.para;})[0];
+    return '- p.'+p.p+' '+a.who+'：'+a.t+(a.reps.length?'\n  - 回复：'+a.reps.map(function(r){return r.who+'：'+r.t;}).join('；'):'');
+  }).join('\n')+'\n\n## 已归档\n'+ARCH.map(function(a){return '- '+a.t;}).join('\n')+'\n';
+ download('组会纪要_Longformer_第3次.md',md,'text/markdown');
+});
+
+/* ============ 06 知识库 ============ */
+var FILTERS=[];
+function buildIndex(){
+ var idx=[];
+ LIB.forEach(function(p){
+   var s=getSummary(p.id);
+   idx.push({k:'论文',t:p.title,d:p.authors+' · '+p.venue+' '+p.year+' · '+p.method,pid:p.id,p:1});
+   idx.push({k:'卡片',t:(s.bd['研究问题'][0]||{}).t,d:'问题 · '+p.title,pid:p.id,p:(s.bd['研究问题'][0]||{}).p});
+   idx.push({k:'卡片',t:(s.bd['结论与局限'][0]||{}).t,d:'局限 · '+p.title,pid:p.id,p:(s.bd['结论与局限'][0]||{}).p});
+ });
+ ANNS.forEach(function(a){
+   var pp=PARAS.filter(function(x){return x.id===a.para;})[0];
+   idx.push({k:'批注',t:a.t,d:a.who+' · 锚定 p.'+(pp?pp.p:1),pid:'p5',p:pp?pp.p:1});
+ });
+ return idx;
+}
+var INDEX=buildIndex();
+function renderRes(){
+ var q=$('#q').value.trim().toLowerCase();
+ var list=INDEX.filter(function(r){
+   var ok=!q||(r.t+' '+r.d).toLowerCase().indexOf(q)>=0;
+   if(FILTERS.length&&FILTERS.indexOf(r.k)<0) ok=false;
+   return ok;
+ }).slice(0,9);
+ $('#res').innerHTML=list.length?list.map(function(r){
+   return '<div class="resitem" data-pid="'+r.pid+'" data-p="'+r.p+'"><div class="k">'+r.k+' · '+esc(r.d)+'</div><div class="t">'+esc(r.t)+'</div><div><span class="pagechip" data-p="'+r.p+'">p.'+r.p+'</span></div></div>';
+ }).join(''):'<p class="tiny muted">没有命中结果，试试「线性」「局限」「窗口」。</p>';
+ $$('#res .resitem').forEach(function(it){ it.addEventListener('click',function(){
+   curPaper=it.dataset.pid; $('#sumPick').value=curPaper; renderSummary(); renderCards();
+   var chip=$('#l1 .pagechip[data-p="'+it.dataset.p+'"]')||$('#srcPane .sp[data-p="'+it.dataset.p+'"]');
+   $$('#srcPane .sp').forEach(function(sp){sp.classList.toggle('on',sp.dataset.p===it.dataset.p);});
+   toast('已跳转原文 p.'+it.dataset.p);
+   document.getElementById('m2').scrollIntoView({behavior:'smooth'});
+ });});
+}
+$('#q').addEventListener('input',renderRes);
+function chipFilter(){
+ $$('#filters .chip').forEach(function(c){ c.addEventListener('click',function(){
+   c.classList.toggle('on');
+   FILTERS=$$('#filters .chip.on').map(function(x){return x.dataset.k;});
+   renderRes();
+ });});
+}
+$('#btnOutline').addEventListener('click',function(){
+ var src=pool.length?pool:[curPaper];
+ var groups={'研究问题':[],'方法路线':[],'实验与结果':[],'局限与开放问题':[]};
+ src.forEach(function(id){
+   var p=LIB.filter(function(x){return x.id===id;})[0]; if(!p) return;
+   var s=getSummary(p.id);
+   groups['研究问题'].push({p:p,x:s.bd['研究问题'][0]});
+   groups['方法路线'].push({p:p,x:s.bd['方法'][0]});
+   groups['实验与结果'].push({p:p,x:s.bd['实验'][0]});
+   groups['局限与开放问题'].push({p:p,x:s.bd['结论与局限'][0]});
+ });
+ $('#outlineBox').hidden=false;
+ $('#outline').innerHTML=Object.keys(groups).map(function(k){
+   return '<div style="margin-bottom:10px"><div style="font-weight:600">'+k+'</div><ul>'+
+     groups[k].map(function(i){
+       return '<li>'+esc(i.x?i.x.t:'—')+' <span class="tiny muted">（'+esc(i.p.authors)+', '+i.p.year+', p.'+(i.x?i.x.p:1)+'）</span></li>';
+     }).join('')+'</ul></div>';
+ }).join('');
+ toast('大纲已生成，引注含页码');
+});
+$('#btnDlOutline').addEventListener('click',function(){
+ var txt=$('#outline').innerText||'请先生成大纲';
+ download('综述草稿大纲.md','# 综述草稿大纲 · 高效注意力\n\n'+txt+'\n','text/markdown');
+});
+
+/* ============ 07 定价 ============ */
+var QUOTA=[{k:'在库篇数',v:74,m:100},{k:'月度新增',v:12,m:20},{k:'脉络节点',v:8,m:30},{k:'协作席位',v:12,m:3}];
+function renderQuota(){
+ $('#quota').innerHTML=QUOTA.map(function(q){
+   var pct=Math.min(100,Math.round(q.v/q.m*100));
+   var warn=pct>=80;
+   return '<div class="qline"><span>'+q.k+'</span><span class="bar"><i style="width:'+pct+'%;background:'+(warn?'var(--warn)':'var(--ink-soft)')+'"></i></span>'+
+     '<span class="tiny '+(warn?'':'muted')+'">'+q.v+' / '+q.m+(warn?' 临近上限':'')+'</span></div>';
+ }).join('');
+}
+$('#seatP').addEventListener('click',function(){ setSeat(+$('#seat').textContent+1); });
+$('#seatM').addEventListener('click',function(){ setSeat(+$('#seat').textContent-1); });
+function setSeat(n){
+ n=Math.max(1,Math.min(50,n)); $('#seat').textContent=n; $('#seatFee').textContent='¥'+(n*68)+' / 月';
+ QUOTA[3].v=n; renderQuota();
+}
+$('#btnUp').addEventListener('click',function(){ toast('已提交升级：实验室版 '+(+$('#seat').textContent)+' 席位（到期前 14 天提醒，欠费不删数据）'); });
+$('#btnFree').addEventListener('click',function(){ toast('免费版：在库 100 篇 / 脉络 30 节点 / 小组 3 人'); });
+$('#btnExportAll').addEventListener('click',function(){
+ download('scholarflow_export.json',JSON.stringify({papers:LIB,refEdges:EDGES,userEdges:USER_EDGES,annotations:ANNS,archived:ARCH,decisions:DECIDES},null,2),'application/json');
+ toast('已导出开放格式数据（PDF 元数据 + 批注 + 卡片）');
+});
+
+/* ============ 初始化 ============ */
+renderLib(); fillPick(); renderSummary(); renderCards(); initGraph(); renderGroup(); renderRes(); renderQuota(); chipFilter();
+$('#filters').innerHTML=['论文','卡片','批注'].map(function(k){return '<span class="chip" data-k="'+k+'">'+k+'</span>';}).join('');
+chipFilter();
+
+/* 导航高亮 */
+var links=$$('#sidenav a'), secs=$$('section.mod');
+window.addEventListener('scroll',function(){
+ var y=window.scrollY+120, cur=secs[0];
+ secs.forEach(function(s){ if(s.offsetTop<=y) cur=s; });
+ links.forEach(function(a){ a.classList.toggle('on', a.getAttribute('href')==='#'+cur.id); });
+},{passive:true});
+
+/* 加载耗时 */
+window.addEventListener('load',function(){
+ var t=performance.timing, ms=t? (t.domContentLoadedEventEnd-t.navigationStart):0;
+ var s=(ms/1000).toFixed(2);
+ $('#m-load').textContent=s+'s'; $('#loadTime').textContent='首页加载 '+s+'s';
+});
+})();
+</script>
+</body>
+</html>
